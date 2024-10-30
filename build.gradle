@@ -1,25 +1,37 @@
 plugins {
     id 'java'
+     id 'com.gradleup.shadow' version '8.3.4'
+    id 'xyz.jpenilla.run-paper' version '2.3.1'
 }
 
 group = 'net.hynse'
 version = '1.0-SNAPSHOT'
 
+logger.lifecycle("Project: ${project.name}, Group: ${group}, Version: ${version}")
+
 repositories {
     mavenCentral()
     maven {
-        name = "papermc-repo"
-        url = "https://repo.papermc.io/repository/maven-public/"
+        name = 'papermc-repo'
+        url = 'https://repo.papermc.io/repository/maven-public/'
     }
     maven {
-        name = "sonatype"
-        url = "https://oss.sonatype.org/content/groups/public/"
+        name = 'sonatype'
+        url = 'https://oss.sonatype.org/content/groups/public/'
+    }
+    maven {
+        url = 'https://jitpack.io'
     }
 }
 
+logger.lifecycle("Repositories configured: ${repositories.names}")
+
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
-}
+    compileOnly 'io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT'
+    implementation 'com.github.NahuLD:folia-scheduler-wrapper:v0.0.3'
+    }
+
+logger.lifecycle("Dependencies added")
 
 def targetJavaVersion = 21
 java {
@@ -31,19 +43,126 @@ java {
     }
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
+logger.lifecycle("Java toolchain set to Java $targetJavaVersion")
 
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release.set(targetJavaVersion)
+tasks {
+    jar {
+        manifest {
+            attributes('paperweight-mappings-namespace': 'mojang')
+        }
+    }
+
+    shadowJar {
+        archiveClassifier.set('')
+        relocate 'com.github.NahuLD', 'net.hynse.link.lib'
+        minimize()
+
+        doFirst {
+            logger.lifecycle("Starting ShadowJar task")
+            logger.lifecycle("Relocating 'com.github.NahuLD' to 'net.hynse.hitpoint.lib'")
+        }
+
+        doLast {
+            logger.lifecycle("ShadowJar task completed. Output: ${archiveFile.get().asFile.absolutePath}")
+        }
+        
+        manifest {
+            attributes('paperweight-mappings-namespace': 'mojang')
+        }
+    }
+
+    build {
+        dependsOn(shadowJar)
+        doFirst {
+            logger.lifecycle("Starting build task")
+        }
+        doLast {
+            logger.lifecycle("Build task completed")
+        }
+    }
+
+    processResources {
+        def props = [version: version]
+        inputs.properties(props)
+        filteringCharset = 'UTF-8'
+        filesMatching('paper-plugin.yml') {
+            expand(props)
+        }
+
+        doFirst {
+            logger.lifecycle("Processing resources")
+            logger.lifecycle("Expanding properties in paper-plugin.yml: $props")
+        }
+
+        doLast {
+            logger.lifecycle("Resource processing completed")
+        }
+    }
+
+    task sendToServer(type: Copy) {
+        def destinationDir = file('/mnt/hynse_mc/6_VanillaNGT_Lumional/plugins/')
+        def sourceFile = layout.buildDirectory.file("libs/${project.name}-${project.version}.jar").get().asFile
+        def oldPluginFile = file("${destinationDir}/${project.name}-${project.version}.jar")
+
+        doFirst {
+            logger.lifecycle("Starting sendToServer task")
+            logger.lifecycle("Source file: ${sourceFile.absolutePath}")
+            logger.lifecycle("Destination directory: ${destinationDir.absolutePath}")
+
+            if (oldPluginFile.exists()) {
+                logger.lifecycle("Deleting old plugin file: ${oldPluginFile.absolutePath}")
+                oldPluginFile.delete()
+            }
+        }
+
+        from(sourceFile)
+        into(destinationDir)
+
+        doLast {
+            logger.lifecycle("File copied to server: ${destinationDir.resolve(sourceFile.name).absolutePath}")
+        }
     }
 }
 
-processResources {
-    def props = [version: version]
-    inputs.properties props
-    filteringCharset 'UTF-8'
-    filesMatching('paper-plugin.yml') {
-        expand props
+tasks.named('sendToServer') {
+    dependsOn('shadowJar', 'build')
+}
+
+def mcVersion = '1.21.1'
+def javaVersion = JavaLanguageVersion.of(21)
+
+def jvmArgsExternal = [
+    '-Dcom.mojang.eula.agree=true',
+    '-XX:+AllowEnhancedClassRedefinition',
+    '-XX:HotswapAgent=core'
+]
+
+runServer {
+    minecraftVersion(mcVersion)
+    runDirectory = new File(rootDir, "run/paper/${mcVersion}")
+
+    javaLauncher = javaToolchains.launcherFor {
+        vendor = JvmVendorSpec.JETBRAINS
+        languageVersion = javaVersion
     }
+
+    jvmArgs = jvmArgsExternal
+}
+
+runPaper.folia.registerTask {
+    minecraftVersion(mcVersion)
+    runDirectory = new File(rootDir, "run/folia/${mcVersion}")
+    serverJar(new File(rootDir, "run/folia/${mcVersion}/server.jar"))
+
+    javaLauncher = javaToolchains.launcherFor {
+        vendor = JvmVendorSpec.JETBRAINS
+        languageVersion = javaVersion
+    }
+
+    jvmArgs = jvmArgsExternal
+}
+
+gradle.buildFinished {
+    def taskNames = gradle.taskGraph.allTasks.collect { it.name }
+    logger.lifecycle("Task execution order: ${taskNames.join(', ')}")
 }
