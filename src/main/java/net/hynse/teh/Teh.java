@@ -218,6 +218,8 @@ public final class Teh extends JavaPlugin implements Listener {
                 display.teleportAsync(nextLoc);
                 
                 currentStep++;
+
+                getLogger().info(String.format("Phase: %s, Step: %d, Y Offset: %.2f", phase, currentStep, yOffset));
             }
         };
         
