@@ -10,6 +10,8 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.checkerframework.checker.units.qual.degrees;
+
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 
@@ -38,7 +40,7 @@ public final class Teh extends JavaPlugin implements Listener {
         
         // Start both animations
         animateScale(display, 1.5f, 20 * 3, 5);
-        animatePosition(display, entity.getLocation(), entity.getWidth() * 2);
+        animateMovement(display, 1.5, 20 * 3, 4);
     }
         /**
      * Creates a configured TextDisplay entity for damage numbers
@@ -146,85 +148,78 @@ public final class Teh extends JavaPlugin implements Listener {
         EASE_IN,
         HOLD,
         EASE_OUT,
-        FAST,
-        NORMAL,
-        SLOW
     }
 
-    private void animatePosition(TextDisplay display, Location startLoc, double distance) {
-        // Animation configuration
-        int fastSteps = 3;    // Initial fast upward arc
-        int normalSteps = 5;  // Peak of arc
-        int slowSteps = 7;    // Slow descent
+    public void animateMovement(Display display, double maxMovement, int totalDuration, int steps) {
+        // Calculate durations for each phase (should add up to totalDuration)
+        int easeInDuration = totalDuration / 10;     // 16.7% for quick ease-in
+        int holdDuration = totalDuration / 8;       // 50% for hold
+        int easeOutDuration = totalDuration / 2;    // 33.3% for slow ease-out
         
-        // Calculate initial direction vector from entity center
-        Vector direction = display.getLocation().subtract(startLoc).toVector().normalize();
+        // Calculate step timings
+        int stepDuration = Math.max(1, Math.min(easeInDuration, easeOutDuration) / steps);
+        int interpolationDuration = Math.max(1, stepDuration / 2);
         
         BukkitRunnable animation = new BukkitRunnable() {
             private int currentStep = 0;
-            private AnimationPhase phase = AnimationPhase.FAST;
-            private double initialY = display.getLocation().getY();
+            private AnimationPhase phase = AnimationPhase.EASE_IN;
+            private double currentLocation = display.getLocation().getY();
             
             @Override
             public void run() {
-                Location currentLoc = display.getLocation();
-                double stepDistance;
-                int teleportDuration;
-                double yOffset = 0;
+                boolean shouldContinue = true;
                 
                 switch (phase) {
-                    case FAST:
-                        if (currentStep >= fastSteps) {
-                            phase = AnimationPhase.NORMAL;
+                    case EASE_IN:
+                        if (currentStep >= steps) {
+                            phase = AnimationPhase.HOLD;
+                            currentStep = 0;
+                            currentLocation = maxMovement;  // Maintain max scale when transitioning to hold
+                        } else {
+                            float progress = (float) currentStep / (steps - 1);
+                            float easedProgress = 1 - (1 - progress) * (1 - progress);
+                            currentLocation = maxMovement * easedProgress;
+                        }
+                        break;
+                        
+                    case HOLD:
+                        if (currentStep >= holdDuration) {
+                            phase = AnimationPhase.EASE_OUT;
                             currentStep = 0;
                         }
-                        stepDistance = distance * 0.15;
-                        yOffset = 0.3; // Strong upward motion
-                        teleportDuration = 1;
+                        // Keep the current scale during hold phase
                         break;
                         
-                    case NORMAL:
-                        if (currentStep >= normalSteps) {
-                            phase = AnimationPhase.SLOW;
-                            currentStep = 0;
+                    case EASE_OUT:
+                        if (currentStep >= steps) {
+                            shouldContinue = false;
+                        } else {
+                            float progress = (float) currentStep / (steps - 1);
+                            float easedProgress = progress * progress;
+                            currentLocation = maxMovement * (1 - easedProgress);
                         }
-                        stepDistance = distance * 0.1;
-                        yOffset = 0.1; // Slight upward motion at peak
-                        teleportDuration = 2;
                         break;
-                        
-                    case SLOW:
-                        if (currentStep >= slowSteps) {
-                            this.cancel();
-                            return;
-                        }
-                        stepDistance = distance * 0.05;
-                        // Gradual downward arc
-                        yOffset = -0.2 * (currentStep / (double) slowSteps);
-                        teleportDuration = 3;
-                        break;
-                        
                     default:
-                        return;
+                        break;
                 }
                 
-                // Calculate next position with arc motion
-                Vector movement = direction.clone().multiply(stepDistance);
-                Location nextLoc = currentLoc.clone().add(movement);
-                nextLoc.add(0, yOffset, 0);
-                
-                // Animate movement
-                display.setTeleportDuration(teleportDuration);
-                display.teleportAsync(nextLoc);
+                if (!shouldContinue) {
+                    this.cancel();
+                    display.remove();
+                    return;
+                }
+                if (currentLocation != maxMovement) {
+                    display.setTeleportDuration(interpolationDuration);
+                    display.setInterpolationDelay(0);
+                    display.teleport(new Location(display.getWorld(), display.getLocation().getX(), currentLocation, display.getLocation().getZ()));
+                }
+                getLogger().info(String.format("Phase: %s, Step: %d, Location: %.2f, %.2f, %.2f", phase, currentStep, currentLocation, display.getLocation().getY(), display.getLocation().getZ()));
                 
                 currentStep++;
-
-                getLogger().info(String.format("Phase: %s, Step: %d, Y Offset: %.2f", phase, currentStep, yOffset));
             }
         };
         
-        // Run animation every 2 ticks
-        animation.runTaskTimer(this, 0L, 2L);
+        animation.runTaskTimer(this, 2L, stepDuration);
     }
 
     private Location getRandomDisplayLocation(Entity entity) {
