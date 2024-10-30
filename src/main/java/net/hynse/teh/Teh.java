@@ -9,11 +9,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Transformation;
-import org.joml.Vector3f;
+import org.bukkit.util.Vector;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.md_5.bungee.api.chat.hover.content.Text;
+import net.kyori.adventure.text.format.TextColor;
 
 import java.util.Random;
 import org.joml.Matrix4f;
@@ -30,26 +28,17 @@ public final class Teh extends JavaPlugin implements Listener {
 
     @EventHandler
     void onEntityDamage(EntityDamageEvent e) {
+        if (e.isCancelled() || e.getFinalDamage() <= 0) return;
+        
         Entity entity = e.getEntity();
         double damage = e.getFinalDamage();
         
-        Location baseLocation = entity.getLocation();
-        Location displayLocation = baseLocation.clone().add(
-            (random.nextDouble() - 0.5) * 0.5,
-            1.5,
-            (random.nextDouble() - 0.5) * 0.5
-        );
-
+        Location displayLocation = getRandomDisplayLocation(entity);
         TextDisplay display = createDamageDisplay(entity, displayLocation, damage);
-        getLogger().info("display created");
-        // First animate in
-        animateEaseIn(display, 1.3f, 8, 3);
         
-        // Then schedule the fade out animation after a delay
-        getServer().getScheduler().runTaskLater(this, () -> {
-            animateEaseOut(display, 1.3f, 16, 6);
-        }, 9L); // Wait 1.5 seconds before starting fade out
-        getLogger().info("fade out scheduled");
+        // Start both animations
+        animateScale(display, 1.5f, 20 * 3, 5);
+        animatePosition(display, entity.getLocation(), entity.getWidth() * 2);
     }
         /**
      * Creates a configured TextDisplay entity for damage numbers
@@ -63,7 +52,7 @@ public final class Teh extends JavaPlugin implements Listener {
         
         // Configure text and appearance
         display.text(Component.text(String.format("%.1f", damage))
-            .color(NamedTextColor.RED));
+            .color(TextColor.color(255, 0, 0)));
         display.setSeeThrough(true);
         display.setPersistent(false);
         display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
@@ -75,138 +64,195 @@ public final class Teh extends JavaPlugin implements Listener {
     }
 
     /**
-     * Animates a Display entity with dynamic ease-in scaling
+     * Animates a Display entity with smooth scale animation
      * @param display The Display entity to animate
-     * @param targetScale The final scale to reach
-     * @param durationTicks Total duration in ticks (20 ticks = 1 second)
-     * @param steps Number of animation steps to use
+     * @param maxScale The maximum scale to reach
+     * @param totalDuration Total duration in ticks (20 ticks = 1 second)
+     * @param steps Number of animation steps for each phase
      */
-    public void animateEaseIn(Display display, float targetScale, int durationTicks, int steps) {
-        getLogger().info("animateEaseIn");
-        // Calculate time between steps
-        int stepDuration = Math.max(1, durationTicks / steps);
+    public void animateScale(Display display, float maxScale, int totalDuration, int steps) {
+        // Calculate durations for each phase (should add up to totalDuration)
+        int easeInDuration = totalDuration / 10;     // 16.7% for quick ease-in
+        int holdDuration = totalDuration / 8;       // 50% for hold
+        int easeOutDuration = totalDuration / 2;    // 33.3% for slow ease-out
         
-        // Calculate scale values using easeOutQuad function
-        float[] scaleSteps = calculateEaseOutScales(0.0f, targetScale, steps);
-        
-        // Calculate interpolation duration for smooth transitions
+        // Calculate step timings
+        int stepDuration = Math.max(1, Math.min(easeInDuration, easeOutDuration) / steps);
         int interpolationDuration = Math.max(1, stepDuration / 2);
         
         BukkitRunnable animation = new BukkitRunnable() {
             private int currentStep = 0;
+            private AnimationPhase phase = AnimationPhase.EASE_IN;
+            private float currentScale = 0;
             
             @Override
             public void run() {
-                if (currentStep >= steps) {
-                    this.cancel();
-                    // Remove display after animation completes
-                    getServer().getScheduler().runTaskLater(
-                        Teh.this, 
-                        display::remove, 
-                        20L // Keep visible for 1 second after animation
-                    );
-                    return;
+                boolean shouldContinue = true;
+                
+                switch (phase) {
+                    case EASE_IN:
+                        if (currentStep >= steps) {
+                            phase = AnimationPhase.HOLD;
+                            currentStep = 0;
+                            currentScale = maxScale;  // Maintain max scale when transitioning to hold
+                        } else {
+                            float progress = (float) currentStep / (steps - 1);
+                            float easedProgress = 1 - (1 - progress) * (1 - progress);
+                            currentScale = maxScale * easedProgress;
+                        }
+                        break;
+                        
+                    case HOLD:
+                        if (currentStep >= holdDuration) {
+                            phase = AnimationPhase.EASE_OUT;
+                            currentStep = 0;
+                        }
+                        // Keep the current scale during hold phase
+                        break;
+                        
+                    case EASE_OUT:
+                        if (currentStep >= steps) {
+                            shouldContinue = false;
+                        } else {
+                            float progress = (float) currentStep / (steps - 1);
+                            float easedProgress = progress * progress;
+                            currentScale = maxScale * (1 - easedProgress);
+                        }
+                        break;
+                    default:
+                        break;
                 }
                 
-                display.setInterpolationDuration(interpolationDuration);
-                display.setInterpolationDelay(0);
-                display.setTransformationMatrix(
-                    new Matrix4f().scale(scaleSteps[currentStep])
-                );
-                getLogger().info("scale" + currentStep + " = " + scaleSteps[currentStep]);
-                
-                currentStep++;
-            }
-        };
-        
-        // Start animation with calculated timing
-        animation.runTaskTimer(this, 2L, stepDuration);
-    }
-
-    /**
-     * Calculates scale values using easeOutQuad easing function
-     * @param startScale Starting scale value
-     * @param endScale Target scale value
-     * @param steps Number of steps to calculate
-     * @return Array of scale values
-     */
-    private float[] calculateEaseOutScales(float startScale, float endScale, int steps) {
-        float[] scales = new float[steps];
-        float change = endScale - startScale;
-        
-        for (int i = 0; i < steps; i++) {
-            float progress = (float) i / (steps - 1);
-            // EaseOutQuad formula: 1 - (1 - progress) * (1 - progress)
-            float easedProgress = 1 - (1 - progress) * (1 - progress);
-            scales[i] = startScale + (change * easedProgress);
-        }
-        
-        return scales;
-    }
-
-    /**
-     * Animates a Display entity with dynamic ease-out scaling (shrinking effect)
-     * @param display The Display entity to animate
-     * @param startScale The initial scale to start from
-     * @param durationTicks Total duration in ticks (20 ticks = 1 second)
-     * @param steps Number of animation steps to use
-     */
-    public void animateEaseOut(Display display, float startScale, int durationTicks, int steps) {
-        getLogger().info("animateEaseOut");
-        // Calculate time between steps
-        int stepDuration = Math.max(1, durationTicks / steps);
-        
-        // Calculate scale values using easeInQuad function (reverse of easeOutQuad)
-        float[] scaleSteps = calculateEaseInScales(startScale, 0.0f, steps);
-        
-        // Calculate interpolation duration for smooth transitions
-        int interpolationDuration = Math.max(1, stepDuration / 2);
-        
-        BukkitRunnable animation = new BukkitRunnable() {
-            private int currentStep = 0;
-            
-            @Override
-            public void run() {
-                if (currentStep >= steps) {
+                if (!shouldContinue) {
                     this.cancel();
                     display.remove();
                     return;
                 }
+                if (currentScale != maxScale) {
+                    display.setInterpolationDuration(interpolationDuration);
+                    display.setInterpolationDelay(0);
+                    display.setTransformationMatrix(new Matrix4f().scale(currentScale));
+                }
+                getLogger().info(String.format("Phase: %s, Step: %d, Scale: %.2f", phase, currentStep, currentScale));
                 
-                display.setInterpolationDuration(interpolationDuration);
-                display.setInterpolationDelay(0);
-                display.setTransformationMatrix(
-                    new Matrix4f().scale(scaleSteps[currentStep])
-                );
-                getLogger().info("scale" + currentStep + " = " + scaleSteps[currentStep]);
                 currentStep++;
             }
         };
         
-        // Start animation with calculated timing
         animation.runTaskTimer(this, 2L, stepDuration);
     }
 
-    /**
-     * Calculates scale values using easeInQuad easing function
-     * Creates a shrinking effect from start to end
-     * @param startScale Starting scale value
-     * @param endScale Target scale value (usually 0)
-     * @param steps Number of steps to calculate
-     * @return Array of scale values
-     */
-    private float[] calculateEaseInScales(float startScale, float endScale, int steps) {
-        float[] scales = new float[steps];
-        float change = endScale - startScale;
+    private enum AnimationPhase {
+        EASE_IN,
+        HOLD,
+        EASE_OUT,
+        FAST,
+        NORMAL,
+        SLOW
+    }
+
+    private void animatePosition(TextDisplay display, Location startLoc, double distance) {
+        // Animation configuration
+        int fastSteps = 3;    // Initial fast upward arc
+        int normalSteps = 5;  // Peak of arc
+        int slowSteps = 7;    // Slow descent
         
-        for (int i = 0; i < steps; i++) {
-            float progress = (float) i / (steps - 1);
-            // EaseInQuad formula: progress * progress
-            float easedProgress = progress * progress;
-            scales[i] = startScale + (change * easedProgress);
-        }
+        // Calculate initial direction vector from entity center
+        Vector direction = display.getLocation().subtract(startLoc).toVector().normalize();
         
-        return scales;
+        BukkitRunnable animation = new BukkitRunnable() {
+            private int currentStep = 0;
+            private AnimationPhase phase = AnimationPhase.FAST;
+            private double initialY = display.getLocation().getY();
+            
+            @Override
+            public void run() {
+                Location currentLoc = display.getLocation();
+                double stepDistance;
+                int teleportDuration;
+                double yOffset = 0;
+                
+                switch (phase) {
+                    case FAST:
+                        if (currentStep >= fastSteps) {
+                            phase = AnimationPhase.NORMAL;
+                            currentStep = 0;
+                        }
+                        stepDistance = distance * 0.15;
+                        yOffset = 0.3; // Strong upward motion
+                        teleportDuration = 1;
+                        break;
+                        
+                    case NORMAL:
+                        if (currentStep >= normalSteps) {
+                            phase = AnimationPhase.SLOW;
+                            currentStep = 0;
+                        }
+                        stepDistance = distance * 0.1;
+                        yOffset = 0.1; // Slight upward motion at peak
+                        teleportDuration = 2;
+                        break;
+                        
+                    case SLOW:
+                        if (currentStep >= slowSteps) {
+                            this.cancel();
+                            return;
+                        }
+                        stepDistance = distance * 0.05;
+                        // Gradual downward arc
+                        yOffset = -0.2 * (currentStep / (double) slowSteps);
+                        teleportDuration = 3;
+                        break;
+                        
+                    default:
+                        return;
+                }
+                
+                // Calculate next position with arc motion
+                Vector movement = direction.clone().multiply(stepDistance);
+                Location nextLoc = currentLoc.clone().add(movement);
+                nextLoc.add(0, yOffset, 0);
+                
+                // Animate movement
+                display.setTeleportDuration(teleportDuration);
+                display.teleportAsync(nextLoc);
+                
+                currentStep++;
+            }
+        };
+        
+        // Run animation every 2 ticks
+        animation.runTaskTimer(this, 0L, 2L);
+    }
+
+    private Location getRandomDisplayLocation(Entity entity) {
+        // Get entity dimensions
+        double entityWidth = entity.getWidth();
+        double entityHeight = entity.getHeight();
+        
+        Location baseLocation = entity.getLocation();
+        
+        // Get entity's direction vector
+        double directionYaw = baseLocation.getYaw();
+        double directionX = -Math.sin(Math.toRadians(directionYaw));
+        double directionZ = Math.cos(Math.toRadians(directionYaw));
+        
+        // Pick a random side (left or right relative to facing direction)
+        boolean rightSide = random.nextBoolean();
+        double sideMultiplier = rightSide ? 1 : -1;
+        
+        // Calculate perpendicular offset (cross product with up vector)
+        double offsetX = -directionZ * sideMultiplier;
+        double offsetZ = directionX * sideMultiplier;
+        
+        // Apply offset scaled by entity width
+        double xOffset = (entityWidth / 2 + 0.2) * offsetX;
+        double zOffset = (entityWidth / 2 + 0.2) * offsetZ;
+        
+        // Random height between 1/3 and 2/3 of entity height
+        double yOffset = entityHeight * (0.33 + random.nextDouble() * 0.33);
+        
+        return baseLocation.clone().add(xOffset, yOffset, zOffset);
     }
 
     @Override
