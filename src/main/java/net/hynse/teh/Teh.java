@@ -1,6 +1,5 @@
 package net.hynse.teh;
 
-import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.TextDisplay;
@@ -9,24 +8,21 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
-import org.checkerframework.checker.units.qual.degrees;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 
 import java.util.Random;
-import org.joml.Matrix4f;
-
+import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Color;
 
 public final class Teh extends JavaPlugin implements Listener {
 
-    private static final Teh INSTANCE = new Teh();
+    public static Teh instance;
     
     @Override
     public void onEnable() {
+        instance = this;
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -56,9 +52,8 @@ public final class Teh extends JavaPlugin implements Listener {
 
     private void spawnDamageDisplay(Entity entity, String text, TextColor color) {
         // Initial setup
-        Random random = new Random();
-        double randomX = random.nextDouble() * 0.5 - 0.25;
-        double randomZ = random.nextDouble() * 0.5 - 0.25;
+        double randomX = getRandomOffset();
+        double randomZ = getRandomOffset();
         
         // Spawn and configure display
         TextDisplay display = entity.getWorld().spawn(
@@ -81,5 +76,8 @@ public final class Teh extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
+    }
+    private double getRandomOffset() {
+        return ThreadLocalRandom.current().nextDouble() * 0.5 - 0.25;
     }
 }

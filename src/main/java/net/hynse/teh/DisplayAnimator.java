@@ -13,7 +13,6 @@ public class DisplayAnimator {
     // 5+10+35+50 = 100
     
     private final TextDisplay display;
-    private final JavaPlugin plugin;
     private final int duration;
     private final float targetScale;
     private final double targetYOffset;
@@ -28,7 +27,6 @@ public class DisplayAnimator {
      */
     public DisplayAnimator(TextDisplay display, JavaPlugin plugin, int duration, float targetScale, double targetYOffset) {
         this.display = display;
-        this.plugin = plugin;
         this.duration = duration;
         this.targetScale = targetScale;
         this.targetYOffset = targetYOffset;
@@ -54,7 +52,7 @@ public class DisplayAnimator {
         int fadeDelay = stabilizeDelay + stabilizeDuration;
         
         // Execute animation sequence
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+        Teh.instance.getServer().getScheduler().runTaskLater(Teh.instance, () -> {
             animate(targetScale * 1.5f, targetYOffset * 0.3, popUpDuration, popUpDelay);
             animate(targetScale * 1.2f, targetYOffset * 0.2, bounceDuration, bounceDelay);
             animate(targetScale, targetYOffset * 0.3, stabilizeDuration, stabilizeDelay);
@@ -62,11 +60,11 @@ public class DisplayAnimator {
         }, 2);
         
         // Remove at the end
-        plugin.getServer().getScheduler().runTaskLater(plugin, display::remove, duration);
+        Teh.instance.getServer().getScheduler().runTaskLater(Teh.instance, display::remove, duration);
     }
     
     private void animate(float scale, double yOffset, int duration, int delay) {
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+        Teh.instance.getServer().getScheduler().runTaskLater(Teh.instance, () -> {
             display.setInterpolationDelay(0);
             display.setInterpolationDuration(duration);
             display.setTeleportDuration(duration);
