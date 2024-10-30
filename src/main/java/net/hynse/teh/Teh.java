@@ -12,13 +12,21 @@ import org.bukkit.plugin.java.JavaPlugin;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 
-import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Color;
 
 public final class Teh extends JavaPlugin implements Listener {
 
     public static Teh instance;
+    private static final double MIN_WIDTH_OFFSET = 0.10;
+    private static final double MAX_WIDTH_EXTRA = 0.13;
+    private static final double MIN_HEIGHT_OFFSET = 0.12;
+    private static final double MAX_HEIGHT_EXTRA = 0.14;
+    private static final TextColor DAMAGE_COLOR = TextColor.color(255, 0, 0);
+    private static final TextColor HEAL_COLOR = TextColor.color(0, 255, 0);
+    private static final int ANIMATION_DURATION = 16;
+    private static final float ANIMATION_SCALE = 1.3f;
+    private static final double ANIMATION_Y_OFFSET = 0.6;
     
     @Override
     public void onEnable() {
@@ -28,56 +36,64 @@ public final class Teh extends JavaPlugin implements Listener {
 
     @EventHandler
     void onEntityDamage(EntityDamageEvent e) {
-        if (e.isCancelled()) return;
-        
-        double damage = e.getFinalDamage();
-        if (damage == 0) return;
-        
-        // Format damage text with minus sign
-        String damageText = String.format("-%.1f", damage);
-        spawnDamageDisplay(e.getEntity(), damageText, TextColor.color(255, 0, 0));
+        if (e.isCancelled() || e.getFinalDamage() == 0) return;
+        spawnDamageDisplay(e.getEntity(), 
+            String.format("-%.1f", e.getFinalDamage()), 
+            DAMAGE_COLOR);
     }
 
     @EventHandler
     void onEntityRegainHealth(EntityRegainHealthEvent e) {
-        if (e.isCancelled()) return;
-        
-        double heal = e.getAmount();
-        if (heal <= 0) return;
-        
-        // Format heal text with plus sign
-        String healText = String.format("+%.1f", heal);
-        spawnDamageDisplay(e.getEntity(), healText, TextColor.color(0, 255, 0));
+        if (e.isCancelled() || e.getAmount() <= 0) return;
+        spawnDamageDisplay(e.getEntity(),
+            String.format("+%.1f", e.getAmount()),
+            HEAL_COLOR);
     }
 
     private void spawnDamageDisplay(Entity entity, String text, TextColor color) {
-        // Initial setup
-        double randomX = getRandomOffset();
-        double randomZ = getRandomOffset();
+        org.bukkit.util.Vector direction = entity.getLocation().getDirection();
+        double sideOffset = getRandomOffset(entity.getWidth());
         
-        // Spawn and configure display
+        if (ThreadLocalRandom.current().nextBoolean()) {
+            sideOffset = -sideOffset;
+        }
+
         TextDisplay display = entity.getWorld().spawn(
-            entity.getLocation().add(randomX, 2.2, randomZ), 
+            entity.getLocation().add(
+                -direction.getZ() * sideOffset,
+                getRandomHeightOffset(entity.getHeight()),
+                direction.getX() * sideOffset
+            ),
             TextDisplay.class
         );
         
-        // Configure display properties
+        configureDisplay(display, text, color);
+        new DisplayAnimator(display, this, ANIMATION_DURATION, 
+            ANIMATION_SCALE, ANIMATION_Y_OFFSET).start();
+    }
+
+    private void configureDisplay(TextDisplay display, String text, TextColor color) {
         display.text(Component.text(text).color(color));
-        display.setSeeThrough(true);
+        display.setSeeThrough(false);
         display.setPersistent(false);
+        display.setShadowed(true);
         display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
         display.setAlignment(TextDisplay.TextAlignment.CENTER);
         display.setBillboard(Display.Billboard.CENTER);
-        
-        // Create and start animator with dynamic parameters
-        new DisplayAnimator(display, this, 16, 1.3f, 0.6).start();
+    }
+
+    private double getRandomOffset(double entityWidth) {
+        return (entityWidth + MIN_WIDTH_OFFSET) + 
+            ThreadLocalRandom.current().nextDouble() * MAX_WIDTH_EXTRA;
+    }
+
+    private double getRandomHeightOffset(double entityHeight) {
+        return (entityHeight + MIN_HEIGHT_OFFSET) + 
+            ThreadLocalRandom.current().nextDouble() * MAX_HEIGHT_EXTRA;
     }
 
     @Override
     public void onDisable() {
         // Plugin shutdown logic
-    }
-    private double getRandomOffset() {
-        return ThreadLocalRandom.current().nextDouble() * 0.5 - 0.25;
     }
 }
