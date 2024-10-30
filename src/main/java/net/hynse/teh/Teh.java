@@ -18,15 +18,15 @@ import org.bukkit.Color;
 public final class Teh extends JavaPlugin implements Listener {
 
     public static Teh instance;
-    private static final double MIN_WIDTH_OFFSET = 0.10;
-    private static final double MAX_WIDTH_EXTRA = 0.13;
-    private static final double MIN_HEIGHT_OFFSET = 0.12;
-    private static final double MAX_HEIGHT_EXTRA = 0.14;
+    private static final double MIN_WIDTH_OFFSET = 0.01;
+    private static final double MAX_WIDTH_EXTRA = 0.04;
+    private static final double MIN_HEIGHT_OFFSET = 0.03;
+    private static final double MAX_HEIGHT_EXTRA = 0.06;
     private static final TextColor DAMAGE_COLOR = TextColor.color(255, 0, 0);
     private static final TextColor HEAL_COLOR = TextColor.color(0, 255, 0);
-    private static final int ANIMATION_DURATION = 16;
-    private static final float ANIMATION_SCALE = 1.3f;
-    private static final double ANIMATION_Y_OFFSET = 0.6;
+    private static final int ANIMATION_DURATION = 10;
+    private static final float ANIMATION_SCALE = 1.7f;
+    private static final double ANIMATION_Y_OFFSET = 0.4;
     
     @Override
     public void onEnable() {
@@ -68,8 +68,7 @@ public final class Teh extends JavaPlugin implements Listener {
         );
         
         configureDisplay(display, text, color);
-        new DisplayAnimator(display, this, ANIMATION_DURATION, 
-            ANIMATION_SCALE, ANIMATION_Y_OFFSET).start();
+        new DisplayAnimator(display, ANIMATION_DURATION, ANIMATION_SCALE, ANIMATION_Y_OFFSET).start();
     }
 
     private void configureDisplay(TextDisplay display, String text, TextColor color) {
