@@ -1,0 +1,4 @@
+name: Teh
+version: '1.0-SNAPSHOT'
+main: net.hynse.teh.Teh
+api-version: '1.21'
