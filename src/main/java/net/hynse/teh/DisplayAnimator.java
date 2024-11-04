@@ -1,6 +1,5 @@
 package net.hynse.teh;
 
-import org.bukkit.scheduler.BukkitScheduler;
 import org.joml.Matrix4f;
 import org.bukkit.entity.TextDisplay;
 
@@ -20,39 +19,38 @@ public class DisplayAnimator {
     // Y-offset multipliers
     private static final double POP_Y_OFFSET = 0.3;
     private static final double BOUNCE_Y_OFFSET = 0.2;
-    
+    private static final double FADE_Y_OFFSET = 3.6;
+
     private final TextDisplay display;
     private final int duration;
     private final float targetScale;
     private final double targetYOffset;
-    private final BukkitScheduler scheduler;
     
     public DisplayAnimator(TextDisplay display, int duration, float targetScale, double targetYOffset) {
         this.display = display;
         this.duration = duration;
         this.targetScale = targetScale;
         this.targetYOffset = targetYOffset;
-        this.scheduler = Teh.instance.getServer().getScheduler();
     }
     
     public void start() {
         // Initial state
-        display.setTransformationMatrix(new Matrix4f().scale(0.0f));
+        display.setTransformationMatrix(new Matrix4f().scale(0.0f).translate(0, 0, 0));
         
         // Calculate phase timings
         int[] durations = calculateDurations();
         int[] delays = calculateDelays(durations);
         
         // Schedule animation sequence
-        scheduler.runTaskLater(Teh.instance, () -> {
+        Teh.instance.scheduler.runTaskLaterAtEntity(display, () -> {
             animate(targetScale * POP_SCALE, targetYOffset * POP_Y_OFFSET, durations[0], delays[0]);
             animate(targetScale * BOUNCE_SCALE, targetYOffset * BOUNCE_Y_OFFSET, durations[1], delays[1]);
             animate(targetScale, targetYOffset * POP_Y_OFFSET, durations[2], delays[2]);
-            animate(FADE_SCALE, targetYOffset * BOUNCE_Y_OFFSET, durations[3], delays[3]);
+            animate(FADE_SCALE, targetYOffset + FADE_Y_OFFSET, durations[3], delays[3]);
         }, INITIAL_DELAY);
-        
+
         // Schedule removal
-        scheduler.runTaskLater(Teh.instance, display::remove, duration);
+        Teh.instance.scheduler.runTaskLaterAtEntity(display, display::remove, duration);
     }
     
     private int[] calculateDurations() {
@@ -74,12 +72,19 @@ public class DisplayAnimator {
     }
     
     private void animate(float scale, double yOffset, int duration, int delay) {
-        scheduler.runTaskLater(Teh.instance, () -> {
+        Teh.instance.scheduler.runTaskLaterAtEntity(display, () -> {
             display.setInterpolationDelay(0);
             display.setInterpolationDuration(duration);
-            display.setTeleportDuration(duration);
-            display.setTransformationMatrix(new Matrix4f().scale(scale));
-            display.teleportAsync(display.getLocation().add(0, yOffset, 0));
+            
+            Matrix4f matrix = new Matrix4f()
+                .scale(scale)
+                .translate(
+                    0,
+                    (float)yOffset,
+                    0
+                );
+                
+            display.setTransformationMatrix(matrix);
         }, delay);
     }
 }

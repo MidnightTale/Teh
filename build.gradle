@@ -133,8 +133,8 @@ def javaVersion = JavaLanguageVersion.of(21)
 
 def jvmArgsExternal = [
     '-Dcom.mojang.eula.agree=true',
-    '-XX:+AllowEnhancedClassRedefinition',
-    '-XX:HotswapAgent=core'
+    // '-XX:+AllowEnhancedClassRedefinition',
+    // '-XX:HotswapAgent=core'
 ]
 
 runServer {
@@ -142,7 +142,6 @@ runServer {
     runDirectory = new File(rootDir, "run/paper/${mcVersion}")
 
     javaLauncher = javaToolchains.launcherFor {
-        vendor = JvmVendorSpec.JETBRAINS
         languageVersion = javaVersion
     }
 
@@ -155,7 +154,6 @@ runPaper.folia.registerTask {
     serverJar(new File(rootDir, "run/folia/${mcVersion}/server.jar"))
 
     javaLauncher = javaToolchains.launcherFor {
-        vendor = JvmVendorSpec.JETBRAINS
         languageVersion = javaVersion
     }
 

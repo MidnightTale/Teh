@@ -7,30 +7,33 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
-import org.bukkit.plugin.java.JavaPlugin;
-
+        
+import me.nahu.scheduler.wrapper.FoliaWrappedJavaPlugin;
+import me.nahu.scheduler.wrapper.WrappedScheduler;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Color;
 
-public final class Teh extends JavaPlugin implements Listener {
+public final class Teh extends FoliaWrappedJavaPlugin implements Listener {
 
     public static Teh instance;
-    private static final double MIN_WIDTH_OFFSET = 0.01;
+    public WrappedScheduler scheduler;
+    private static final double MIN_WIDTH_OFFSET = 0.4;
     private static final double MAX_WIDTH_EXTRA = 0.04;
     private static final double MIN_HEIGHT_OFFSET = 0.03;
     private static final double MAX_HEIGHT_EXTRA = 0.06;
     private static final TextColor DAMAGE_COLOR = TextColor.color(255, 0, 0);
     private static final TextColor HEAL_COLOR = TextColor.color(0, 255, 0);
-    private static final int ANIMATION_DURATION = 10;
-    private static final float ANIMATION_SCALE = 1.7f;
-    private static final double ANIMATION_Y_OFFSET = 0.4;
+    private static final int ANIMATION_DURATION = 40;
+    private static final float ANIMATION_SCALE = 1.3f;
+    private static final double ANIMATION_Y_OFFSET = 0.7;
     
     @Override
     public void onEnable() {
         instance = this;
+        scheduler = getScheduler();
         getServer().getPluginManager().registerEvents(this, this);
     }
 
@@ -68,7 +71,13 @@ public final class Teh extends JavaPlugin implements Listener {
         );
         
         configureDisplay(display, text, color);
-        new DisplayAnimator(display, ANIMATION_DURATION, ANIMATION_SCALE, ANIMATION_Y_OFFSET).start();
+        
+        new DisplayAnimator(
+            display, 
+            ANIMATION_DURATION, 
+            ANIMATION_SCALE, 
+            ANIMATION_Y_OFFSET
+        ).start();
     }
 
     private void configureDisplay(TextDisplay display, String text, TextColor color) {
@@ -87,7 +96,7 @@ public final class Teh extends JavaPlugin implements Listener {
     }
 
     private double getRandomHeightOffset(double entityHeight) {
-        return (entityHeight + MIN_HEIGHT_OFFSET) + 
+        return (entityHeight - MIN_HEIGHT_OFFSET) + 
             ThreadLocalRandom.current().nextDouble() * MAX_HEIGHT_EXTRA;
     }
 
