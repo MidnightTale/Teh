@@ -39,7 +39,7 @@ public final class Teh extends FoliaWrappedJavaPlugin implements Listener {
 
     @EventHandler
     void onEntityDamage(EntityDamageEvent e) {
-        if (e.isCancelled() || e.getFinalDamage() == 0) return;
+        if (e.isCancelled() || e.getFinalDamage() == 0 || e.getEntity().getType() == org.bukkit.entity.EntityType.ALLAY) return;
         spawnDamageDisplay(e.getEntity(), 
             String.format("-%.1f", e.getFinalDamage()), 
             DAMAGE_COLOR);
@@ -47,7 +47,7 @@ public final class Teh extends FoliaWrappedJavaPlugin implements Listener {
 
     @EventHandler
     void onEntityRegainHealth(EntityRegainHealthEvent e) {
-        if (e.isCancelled() || e.getAmount() <= 0) return;
+        if (e.isCancelled() || e.getAmount() <= 0 || e.getEntity().getType() == org.bukkit.entity.EntityType.ALLAY) return;
         spawnDamageDisplay(e.getEntity(),
             String.format("+%.1f", e.getAmount()),
             HEAL_COLOR);
