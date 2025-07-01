@@ -13,6 +13,8 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.Component;
+import org.bukkit.entity.EntityType;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 
 public class TehEventListener implements Listener {
  
@@ -36,6 +38,7 @@ public class TehEventListener implements Listener {
             e.getFinalDamage() == 0 ||
             e.getEntity() instanceof org.bukkit.entity.Item ||
             e.getEntity().getType() == org.bukkit.entity.EntityType.ALLAY) return;
+        if (e.getEntity().getType() == EntityType.ARMOR_STAND && e.getCause() == DamageCause.SUFFOCATION) return;
         String icon = ConfigManager.getIconForDamageCause(e.getCause());
         String template = ConfigManager.getMessageTemplate("damage");
         if (e.getEntity() instanceof Player player) {
