@@ -1,0 +1,78 @@
+# === Indicator Colors ===
+indicator-colors:
+  # Color for HP lost (damage to health)
+  hp-lost: '#FF3B30'
+  # Color for Absorption lost (damage to absorption/extra hearts)
+  ap-lost: '#FFD600'
+  # Color for both HP & Absorption lost at the same time
+  both-lost: '#FF9500'
+  # Color for HP gain (healing)
+  hp-gain: '#34C759'
+  # Color for Absorption gain (gaining absorption/extra hearts)
+  ap-gain: '#32ADE6'
+  # Color for both HP & Absorption gain at the same time
+  both-gain: '#AF52DE'
+  # Color for XP gain
+  xp-gain: '#5EDE3E'
+  # Color for XP lost (negative XP change)
+  xp-lost: '#FF3B30'
+
+# === Display Settings ===
+display-settings:
+  # If true, text is see-through (not occluded by blocks)
+  see-through: false
+  # Background color in ARGB hex (e.g. '#00000000' for fully transparent)
+  background-color: '#00000000'
+  # If true, text has a shadow
+  shadowed: false
+  # Text alignment: CENTER, LEFT, or RIGHT
+  alignment: 'CENTER'
+  # Billboard mode: CENTER, FIXED, HORIZONTAL, or VERTICAL
+  billboard: 'CENTER'
+
+# === Message Templates ===
+# Placeholders: {indicator_color}, {icon}, {amount}, {type}
+#   {indicator_color} = hex color code (e.g. #FF3B30)
+#   {icon} = icon for the event/cause
+#   {amount} = numeric value (damage, heal, xp)
+#   {type} = type of indicator (HP, AP, HP+AP, XP, etc)
+messages:
+  # Template and icons for damage indicators
+  damage:
+    template: "<color:{indicator_color}>{icon} -{amount} {type}</color>"
+    icons:
+      ENTITY_ATTACK: "🗡"
+      ENTITY_SWEEP_ATTACK: "🗡"
+      PROJECTILE: "🏹"
+      CONTACT: "🪓"
+      ENTITY_EXPLOSION: "☄"
+      BLOCK_EXPLOSION: "☄"
+      LAVA: "☄"
+      HOT_FLOOR: "☄"
+      FALL: "⏳"
+      DRAGON_BREATH: "⏳"
+      FIRE: "🔥"
+      FIRE_TICK: "🔥"
+      MAGIC: "🧪"
+      POISON: "⚗"
+      THORNS: "⯪"
+      DROWNING: "☔"
+      SUFFOCATION: "⯫"
+      VOID: "Ɑ"
+      LIGHTNING: "⚡"
+      STARVATION: "🍖"
+      FALLING_BLOCK: "🪣"
+      CRAMMING: "🔔"
+      WITHER: "⛏"
+      FREEZE: "⛄"
+      SONIC_BOOM: "🔊"
+      DEFAULT: ""
+  # Template for heal indicators
+  heal:
+    template: "<color:{indicator_color}>✨ +{amount} {type}</color>"
+  # Template for XP gain
+  xp-gain:
+    template: "<color:{indicator_color}>🟢 +{amount} XP</color>"
+  # Template for XP lost
+  xp-lost:
+    template: "<color:{indicator_color}>🔴 -{amount} XP</color>"

@@ -1,22 +1,22 @@
-package net.hynse.teh;
+package net.hynse.teh.display;
 
 import org.joml.Matrix4f;
+
+import net.hynse.teh.Teh;
+
 import org.bukkit.entity.TextDisplay;
 
 public class DisplayAnimator {
-    // Animation phase percentages and delays
     private static final double POP_UP_PERCENT = 0.05;
     private static final double BOUNCE_PERCENT = 0.10;
     private static final double STABILIZE_PERCENT = 0.35;
     private static final double FADE_PERCENT = 0.50;
     private static final int INITIAL_DELAY = 2;
     
-    // Scale multipliers
     private static final float POP_SCALE = 1.5f;
     private static final float BOUNCE_SCALE = 1.2f;
     private static final float FADE_SCALE = 0.1f;
     
-    // Y-offset multipliers
     private static final double POP_Y_OFFSET = 0.3;
     private static final double BOUNCE_Y_OFFSET = 0.2;
     private static final double FADE_Y_OFFSET = 3.6;
@@ -34,14 +34,11 @@ public class DisplayAnimator {
     }
     
     public void start() {
-        // Initial state
         display.setTransformationMatrix(new Matrix4f().scale(0.0f).translate(0, 0, 0));
         
-        // Calculate phase timings
         int[] durations = calculateDurations();
         int[] delays = calculateDelays(durations);
         
-        // Schedule animation sequence
         Teh.instance.scheduler.runTaskLaterAtEntity(display, () -> {
             animate(targetScale * POP_SCALE, targetYOffset * POP_Y_OFFSET, durations[0], delays[0]);
             animate(targetScale * BOUNCE_SCALE, targetYOffset * BOUNCE_Y_OFFSET, durations[1], delays[1]);
@@ -49,7 +46,6 @@ public class DisplayAnimator {
             animate(FADE_SCALE, targetYOffset + FADE_Y_OFFSET, durations[3], delays[3]);
         }, INITIAL_DELAY);
 
-        // Schedule removal
         Teh.instance.scheduler.runTaskLaterAtEntity(display, display::remove, duration);
     }
     
