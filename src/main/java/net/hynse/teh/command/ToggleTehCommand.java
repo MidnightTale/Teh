@@ -31,6 +31,6 @@ public class ToggleTehCommand implements CommandExecutor {
 
     public static boolean isIndicatorEnabled(Player player) {
         Integer value = player.getPersistentDataContainer().get(KEY, PersistentDataType.INTEGER);
-        return value != null && value == 1;
+        return value == null || value == 1;
     }
 } 
