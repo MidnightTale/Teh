@@ -1,9 +1,9 @@
 # Floating Damage/Heal/XP Indicator
 - Animated floating text for damage, healing, and XP
-- Per-player toggle: `/toggleteh`
+- Per-player toggle: `/toggleteh` (teh.indicator.toggle)
 - Fully customizable colors, icons, and messages (`config.yml`)
 - MiniMessage support (true color, icons)
-- Reload config instantly: `/tehreload`
+- Reload config instantly: `/tehreload`(teh.reload)
 
 ## Quick Config Example
 ```yaml
