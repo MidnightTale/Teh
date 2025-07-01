@@ -6,6 +6,7 @@ import me.nahu.scheduler.wrapper.WrappedScheduler;
 
 import net.hynse.teh.event.TehEventListener;
 import net.hynse.teh.command.ReloadCommand;
+import net.hynse.teh.command.ToggleTehCommand;
 
 public final class Teh extends FoliaWrappedJavaPlugin implements Listener {
 
@@ -18,6 +19,7 @@ public final class Teh extends FoliaWrappedJavaPlugin implements Listener {
         ConfigManager.reload(this);
         getServer().getPluginManager().registerEvents(new TehEventListener(), this);
         getCommand("tehreload").setExecutor(new ReloadCommand());
+        getCommand("toggleteh").setExecutor(new ToggleTehCommand());
     }
 
 

@@ -8,3 +8,7 @@ commands:
     description: Reloads the Teh plugin configuration.
     usage: /tehreload
     permission: teh.reload
+  toggleteh:
+    description: Toggle your health indicator display.
+    usage: /toggleteh
+    permission: teh.indicator.toggle
