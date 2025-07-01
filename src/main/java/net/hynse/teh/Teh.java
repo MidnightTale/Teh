@@ -20,6 +20,9 @@ public final class Teh extends FoliaWrappedJavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(new TehEventListener(), this);
         getCommand("tehreload").setExecutor(new ReloadCommand());
         getCommand("toggleteh").setExecutor(new ToggleTehCommand());
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new TehExpansion().register();
+        }
     }
 
 
