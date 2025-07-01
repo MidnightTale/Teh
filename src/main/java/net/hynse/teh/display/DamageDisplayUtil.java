@@ -6,6 +6,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.TextDisplay;
 import java.util.concurrent.ThreadLocalRandom;
 import net.hynse.teh.ConfigManager;
+import org.bukkit.entity.Player;
+import net.hynse.teh.command.ToggleTehCommand;
 
 public class DamageDisplayUtil {
     private static final double MIN_WIDTH_OFFSET = 0.05;
@@ -29,6 +31,19 @@ public class DamageDisplayUtil {
             TextDisplay.class
         );
         configureDisplay(display, text);
+
+        // Only show to players who have indicators enabled
+        var enabledPlayers = entity.getWorld().getPlayers().stream()
+            .filter(ToggleTehCommand::isIndicatorEnabled)
+            .toList();
+        if (enabledPlayers.isEmpty()) {
+            display.remove();
+            return;
+        }
+        for (Player viewer : enabledPlayers) {
+            viewer.showEntity(net.hynse.teh.Teh.instance, display);
+        }
+
         new net.hynse.teh.display.DisplayAnimator(
             display,
             40,
