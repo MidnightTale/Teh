@@ -55,6 +55,3 @@ If PlaceholderAPI is installed, Teh registers the following placeholder:
 
 ## Soft Dependencies
 - PlaceholderAPI (for placeholders)
-
-## License
-MIT
